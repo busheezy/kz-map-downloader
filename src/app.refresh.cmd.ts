@@ -1,5 +1,9 @@
-import { Command, CommandRunner } from 'nest-commander';
+import { Command, CommandRunner, Option } from 'nest-commander';
 import { RefreshService } from './app.refresh.service';
+
+interface RefreshCommandOptions {
+  dry?: true;
+}
 
 @Command({ name: 'refresh', description: 'Do the damn thang.' })
 export class RefreshCommand extends CommandRunner {
@@ -7,7 +11,23 @@ export class RefreshCommand extends CommandRunner {
     super();
   }
 
-  async run(_passedParam: string[]): Promise<void> {
+  async run(
+    _passedParam: string[],
+    options: RefreshCommandOptions,
+  ): Promise<void> {
+    if (options.dry) {
+      await this.refreshService.run(true);
+      return;
+    }
+
     await this.refreshService.run();
+  }
+
+  @Option({
+    flags: '-d, --dry',
+    description: 'Do not save anything.',
+  })
+  dry(): true {
+    return true;
   }
 }

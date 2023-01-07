@@ -37,3 +37,4 @@ lerna-debug.log*
 global-spec.json
 src/global-api
 maps.json
+maps

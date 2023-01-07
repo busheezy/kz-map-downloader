@@ -55,22 +55,52 @@ export class RefreshService {
         await axios.head(bspPath);
         map.bsp = bspPath;
       } catch {
-        console.warn(`${mapName} is missing EVERYWHERE!!!`);
+        console.warn(`${mapName} can't be found.`);
       }
     });
   }
 
-  async run() {
+  outputResults(kzdlMaps: KZDLMaps) {
+    let missingMaps = 0;
+    let wsMaps = 0;
+    let ftpMaps = 0;
+
+    const kzdlMapsKeys = Object.keys(kzdlMaps);
+
+    kzdlMapsKeys.forEach((kzdlMapsKey) => {
+      const kzdlMap = kzdlMaps[kzdlMapsKey];
+
+      if (kzdlMap.ws) {
+        wsMaps += 1;
+      } else if (kzdlMap.bsp) {
+        ftpMaps += 1;
+      } else {
+        missingMaps += 1;
+      }
+    });
+
+    console.log(`\nA total of ${kzdlMapsKeys.length} maps.`);
+    console.log('WS:', wsMaps);
+    console.log('FTP:', ftpMaps);
+    console.log('Missing:', missingMaps);
+  }
+
+  async run(dry = false) {
     const globalApiMaps = await this.gokzApiService.getGlobalApiMaps();
     const kzdlMaps = this.createKZDLMapsFromApiResponse(globalApiMaps);
     await this.workshopService.getWorkshopInfoFromMaps(kzdlMaps, globalApiMaps);
     await this.getFTPPathsForMissingWorkshopFiles(kzdlMaps);
 
-    await fs.writeJSON(mapsPath, kzdlMaps, {
-      spaces: 2,
-    });
+    this.outputResults(kzdlMaps);
 
-    const kzdlMapsKeys = Object.keys(kzdlMaps);
-    console.log(`A total of ${kzdlMapsKeys.length} maps.`);
+    if (dry) {
+      console.log('Nothing has been saved.');
+    } else {
+      await fs.writeJSON(mapsPath, kzdlMaps, {
+        spaces: 2,
+      });
+
+      console.log('Saved to maps.json');
+    }
   }
 }
