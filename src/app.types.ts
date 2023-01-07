@@ -37,11 +37,16 @@ export interface VolvoItem {
   tags: { tag: string }[];
 }
 
+export interface KZDLMapBsp {
+  url: string;
+  size: number;
+}
+
 export interface KZDLMap {
   id: string;
   globalApiMap: Map;
   ws?: VolvoItem;
-  bsp?: string;
+  bsp?: KZDLMapBsp;
 }
 
 export type KZDLMaps = Record<string, KZDLMap>;

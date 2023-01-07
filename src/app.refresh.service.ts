@@ -52,8 +52,13 @@ export class RefreshService {
       const bspPath = `https://maps.global-api.com/bsps/${mapName}.bsp`;
 
       try {
-        await axios.head(bspPath);
-        map.bsp = bspPath;
+        const response = await axios.head(bspPath);
+        const contentLength = parseInt(response.headers['content-length'], 10);
+
+        map.bsp = {
+          url: bspPath,
+          size: contentLength,
+        };
       } catch {
         console.warn(`${mapName} can't be found.`);
       }
