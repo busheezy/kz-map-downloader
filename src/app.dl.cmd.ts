@@ -14,12 +14,10 @@ export class DownloadCommand extends CommandRunner {
     options: DownloadCommandOptions,
   ): Promise<void> {
     this.downloadService.run({
-      ws: options.ws,
-      ftp: options.ftp,
+      ...options,
       mapsPath: options.mapsPath
         ? path.resolve(options.mapsPath)
         : path.resolve(__dirname, '..', 'output', 'maps'),
-      tiers: options.tiers,
     });
   }
 
@@ -36,6 +34,14 @@ export class DownloadCommand extends CommandRunner {
     description: 'Only download files from FTP.',
   })
   ftp(): true {
+    return true;
+  }
+
+  @Option({
+    flags: '-n, --nav',
+    description: 'Create nav files.',
+  })
+  nav(): true {
     return true;
   }
 

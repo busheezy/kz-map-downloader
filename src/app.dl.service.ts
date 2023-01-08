@@ -7,6 +7,8 @@ import { MapsCacheService } from './app.maps-cache.service';
 import { DownloadCommandOptions, KZDLMap, KZDLMaps } from './app.types';
 import * as path from 'node:path';
 
+const sourceNavFilePath = path.resolve(__dirname, '..', 'nav.nav');
+
 @Injectable()
 export class DownloadService {
   constructor(private readonly mapCacheService: MapsCacheService) {}
@@ -42,7 +44,7 @@ export class DownloadService {
       }
     } catch {}
 
-    await this.download(url, outputPath, true);
+    await this.download(url, outputPath, workshop);
 
     console.log(
       'Downloaded: ',
@@ -55,6 +57,11 @@ export class DownloadService {
     if (fileStatAfter.size !== map.globalApiMap.filesize) {
       console.warn('File size does not match.');
     }
+  }
+
+  async addNavFile(outputPath: string) {
+    const outputNavPath = outputPath.replace('.bsp', '.nav');
+    await fs.copyFile(sourceNavFilePath, outputNavPath);
   }
 
   async getFTPMaps(
@@ -88,6 +95,10 @@ export class DownloadService {
         );
 
         await this.downloadIfDifferent(map.bsp.url, outputPath, map);
+
+        if (downloadCommandOptions.nav) {
+          await this.addNavFile(outputPath);
+        }
       },
       {
         concurrency: 2,
@@ -140,6 +151,10 @@ export class DownloadService {
         );
 
         await this.downloadIfDifferent(map.ws.file_url, outputPath, map, true);
+
+        if (downloadCommandOptions.nav) {
+          await this.addNavFile(outputPath);
+        }
       },
       {
         concurrency: 4,
@@ -148,27 +163,34 @@ export class DownloadService {
   }
 
   async download(url: string, path: string, unzip?: true) {
-    const file = await axios({
-      url,
-      method: 'GET',
-      responseType: 'stream',
-    });
+    try {
+      const file = await axios({
+        url,
+        method: 'GET',
+        responseType: 'stream',
+      });
 
-    const writeStream = fs.createWriteStream(path);
+      const writeStream = fs.createWriteStream(path);
 
-    if (unzip) {
-      file.data
-        .pipe(unzipper.Parse())
-        .on('entry', (entry: unzipper.Entry): void => {
-          entry.pipe(writeStream);
-        });
-    } else {
-      file.data.pipe(writeStream);
+      await new Promise((resolve, reject): void => {
+        if (unzip) {
+          file.data
+            .pipe(unzipper.Parse())
+            .on('entry', (entry: unzipper.Entry): void => {
+              entry.pipe(writeStream);
+            })
+            .on('error', reject);
+        } else {
+          file.data.pipe(writeStream);
+        }
+
+        writeStream.on('finish', resolve);
+        writeStream.on('error', reject);
+      });
+    } catch (err) {
+      console.log('hi', { url });
+
+      throw err;
     }
-
-    await new Promise((resolve, reject): void => {
-      writeStream.on('finish', resolve);
-      writeStream.on('error', reject);
-    });
   }
 }

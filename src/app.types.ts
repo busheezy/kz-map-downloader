@@ -60,4 +60,5 @@ export interface DownloadCommandOptions {
   ftp?: true;
   mapsPath?: string;
   tiers?: number[];
+  nav?: true;
 }
