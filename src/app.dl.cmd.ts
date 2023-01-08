@@ -18,6 +18,7 @@ export class DownloadCommand extends CommandRunner {
       mapsPath: options.mapsPath
         ? path.resolve(options.mapsPath)
         : path.resolve(__dirname, '..', 'output', 'maps'),
+      mapListPath: path.resolve(options.mapListPath),
     });
   }
 
@@ -59,5 +60,14 @@ export class DownloadCommand extends CommandRunner {
   })
   tiers(val: string): number[] {
     return val.split(',').map((tier) => parseInt(tier, 10));
+  }
+
+  @Option({
+    flags: '-l, --map-list-path [path]',
+    description: 'Create a map list. (Defaults to "./output/mapcycle.txt")',
+    defaultValue: path.resolve(__dirname, '..', 'output', 'mapcycle.txt'),
+  })
+  mapList(val: string): string {
+    return val;
   }
 }

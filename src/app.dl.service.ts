@@ -14,6 +14,10 @@ export class DownloadService {
   constructor(private readonly mapCacheService: MapsCacheService) {}
 
   async run(downloadCommandOptions: DownloadCommandOptions) {
+    if (downloadCommandOptions.mapListPath) {
+      await fs.remove(downloadCommandOptions.mapListPath);
+    }
+
     const maps = await this.mapCacheService.read();
 
     if (downloadCommandOptions.ws && !downloadCommandOptions.ftp) {
@@ -99,6 +103,11 @@ export class DownloadService {
         if (downloadCommandOptions.nav) {
           await this.addNavFile(outputPath);
         }
+
+        await fs.appendFile(
+          downloadCommandOptions.mapListPath,
+          `${map.globalApiMap.name}\n`,
+        );
       },
       {
         concurrency: 2,
@@ -155,6 +164,11 @@ export class DownloadService {
         if (downloadCommandOptions.nav) {
           await this.addNavFile(outputPath);
         }
+
+        await fs.appendFile(
+          downloadCommandOptions.mapListPath,
+          `${map.globalApiMap.name}\n`,
+        );
       },
       {
         concurrency: 4,

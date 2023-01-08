@@ -61,4 +61,5 @@ export interface DownloadCommandOptions {
   mapsPath?: string;
   tiers?: number[];
   nav?: true;
+  mapListPath?: string;
 }
