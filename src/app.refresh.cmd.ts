@@ -2,7 +2,10 @@ import { Command, CommandRunner, Option } from 'nest-commander';
 import { RefreshService } from './app.refresh.service';
 import { RefreshCommandOptions } from './app.types';
 
-@Command({ name: 'refresh', description: 'Do the damn thang.' })
+@Command({
+  name: 'refresh',
+  description: 'Refresh global api and workshop info.',
+})
 export class RefreshCommand extends CommandRunner {
   constructor(private readonly refreshService: RefreshService) {
     super();

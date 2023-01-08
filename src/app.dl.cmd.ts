@@ -15,9 +15,7 @@ export class DownloadCommand extends CommandRunner {
   ): Promise<void> {
     this.downloadService.run({
       ...options,
-      mapsPath: options.mapsPath
-        ? path.resolve(options.mapsPath)
-        : path.resolve(__dirname, '..', 'output', 'maps'),
+      mapsPath: path.resolve(options.mapsPath),
       mapListPath: path.resolve(options.mapListPath),
     });
   }
@@ -47,14 +45,6 @@ export class DownloadCommand extends CommandRunner {
   }
 
   @Option({
-    flags: '-m, --maps-path <path>',
-    description: 'Specify maps folder. (Defaults to "./output/maps")',
-  })
-  mapsFolder(val: string): string {
-    return val;
-  }
-
-  @Option({
     flags: '-t, --tiers <tiers>',
     description: 'Specify tiers.',
   })
@@ -63,11 +53,20 @@ export class DownloadCommand extends CommandRunner {
   }
 
   @Option({
+    flags: '-m, --maps-path <path>',
+    description: 'Specify maps folder.',
+    defaultValue: './output/maps',
+  })
+  mapsFolder(val: string): string {
+    return path.resolve(val);
+  }
+
+  @Option({
     flags: '-l, --map-list-path [path]',
-    description: 'Create a map list. (Defaults to "./output/mapcycle.txt")',
-    defaultValue: path.resolve(__dirname, '..', 'output', 'mapcycle.txt'),
+    description: 'Create a map list.',
+    defaultValue: './output/mapcycle.txt',
   })
   mapList(val: string): string {
-    return val;
+    return path.resolve(val);
   }
 }
