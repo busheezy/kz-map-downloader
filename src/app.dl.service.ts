@@ -4,39 +4,76 @@ import Bluebird from 'bluebird';
 import fs from 'fs-extra';
 import * as unzipper from 'unzipper';
 import { MapsCacheService } from './app.maps-cache.service';
-import { KZDLMaps } from './app.types';
+import { DownloadCommandOptions, KZDLMap, KZDLMaps } from './app.types';
 import * as path from 'node:path';
-
-const mapsPath = path.resolve(__dirname, '..', 'maps');
-const workshopMapsPath = path.resolve(__dirname, '..', 'maps', 'workshop');
 
 @Injectable()
 export class DownloadService {
   constructor(private readonly mapCacheService: MapsCacheService) {}
 
-  async run(ws?: true, ftp?: true) {
+  async run(downloadCommandOptions: DownloadCommandOptions) {
     const maps = await this.mapCacheService.read();
 
-    if (ws && !ftp) {
-      await this.getWSMaps(maps);
+    if (downloadCommandOptions.ws && !downloadCommandOptions.ftp) {
+      await this.getWSMaps(downloadCommandOptions, maps);
       return;
     }
 
-    if (ftp && !ws) {
-      await this.getFTPMaps(maps);
+    if (downloadCommandOptions.ftp && !downloadCommandOptions.ws) {
+      await this.getFTPMaps(downloadCommandOptions, maps);
       return;
     }
 
-    await this.getWSMaps(maps);
-    await this.getFTPMaps(maps);
+    await this.getWSMaps(downloadCommandOptions, maps);
+    await this.getFTPMaps(downloadCommandOptions, maps);
   }
 
-  async getFTPMaps(maps: KZDLMaps) {
-    await fs.ensureDir(mapsPath);
+  async downloadIfDifferent(
+    url: string,
+    outputPath: string,
+    map: KZDLMap,
+    workshop?: true,
+  ) {
+    try {
+      const fileStat = await fs.stat(outputPath);
+      if (fileStat.size === map.globalApiMap.filesize) {
+        console.log('Skipping:', map.globalApiMap.name);
+        return;
+      }
+    } catch {}
+
+    await this.download(url, outputPath, true);
+
+    console.log(
+      'Downloaded: ',
+      map.globalApiMap.name,
+      workshop ? 'from workshop.' : 'from ftp.',
+    );
+
+    const fileStatAfter = await fs.stat(outputPath);
+
+    if (fileStatAfter.size !== map.globalApiMap.filesize) {
+      console.warn('File size does not match.');
+    }
+  }
+
+  async getFTPMaps(
+    downloadCommandOptions: DownloadCommandOptions,
+    maps: KZDLMaps,
+  ) {
+    await fs.ensureDir(downloadCommandOptions.mapsPath);
     const mapKeys = Object.keys(maps);
 
     const ftpMapKeys = mapKeys.filter((key) => {
       const map = maps[key];
+
+      if (
+        downloadCommandOptions.tiers &&
+        !downloadCommandOptions.tiers.includes(map.globalApiMap.difficulty)
+      ) {
+        return false;
+      }
+
       return !!map.bsp;
     });
 
@@ -44,24 +81,13 @@ export class DownloadService {
       ftpMapKeys,
       async (ftpMapKey) => {
         const map = maps[ftpMapKey];
-        const outputPath = path.join(mapsPath, `${map.globalApiMap.name}.bsp`);
 
-        try {
-          const fileStat = await fs.stat(outputPath);
-          if (fileStat.size === map.globalApiMap.filesize) {
-            console.log('Skipping:', map.globalApiMap.name);
-            return;
-          }
-        } catch {}
+        const outputPath = path.join(
+          downloadCommandOptions.mapsPath,
+          `${map.globalApiMap.name}.bsp`,
+        );
 
-        await this.download(map.bsp.url, outputPath);
-        console.log('Downloaded: ', map.globalApiMap.name, 'from ftp.');
-
-        const fileStatAfter = await fs.stat(outputPath);
-
-        if (fileStatAfter.size !== map.globalApiMap.filesize) {
-          console.warn('File size does not match.');
-        }
+        await this.downloadIfDifferent(map.bsp.url, outputPath, map);
       },
       {
         concurrency: 2,
@@ -69,13 +95,29 @@ export class DownloadService {
     );
   }
 
-  async getWSMaps(maps: KZDLMaps) {
-    await fs.ensureDir(mapsPath);
+  async getWSMaps(
+    downloadCommandOptions: DownloadCommandOptions,
+    maps: KZDLMaps,
+  ) {
+    const workshopMapsPath = path.resolve(
+      downloadCommandOptions.mapsPath,
+      'workshop',
+    );
+
+    await fs.ensureDir(downloadCommandOptions.mapsPath);
     await fs.ensureDir(workshopMapsPath);
     const mapKeys = Object.keys(maps);
 
     const wsMapKeys = mapKeys.filter((key) => {
       const map = maps[key];
+
+      if (
+        downloadCommandOptions.tiers &&
+        !downloadCommandOptions.tiers.includes(map.globalApiMap.difficulty)
+      ) {
+        return false;
+      }
+
       return !!map.ws;
     });
 
@@ -84,7 +126,12 @@ export class DownloadService {
       async (wsMapKey) => {
         const map = maps[wsMapKey];
 
-        const workshopMapPath = path.resolve(mapsPath, 'workshop', map.id);
+        const workshopMapPath = path.resolve(
+          downloadCommandOptions.mapsPath,
+          'workshop',
+          map.id,
+        );
+
         await fs.ensureDir(workshopMapPath);
 
         const outputPath = path.join(
@@ -92,22 +139,7 @@ export class DownloadService {
           `${map.globalApiMap.name}.bsp`,
         );
 
-        try {
-          const fileStat = await fs.stat(outputPath);
-          if (fileStat.size === map.globalApiMap.filesize) {
-            console.log('Skipping:', map.globalApiMap.name);
-            return;
-          }
-        } catch {}
-
-        await this.download(map.ws.file_url, outputPath, true);
-        console.log('Downloaded: ', map.globalApiMap.name, 'from workshop.');
-
-        const fileStatAfter = await fs.stat(outputPath);
-
-        if (fileStatAfter.size !== map.globalApiMap.filesize) {
-          console.warn('File size does not match.');
-        }
+        await this.downloadIfDifferent(map.ws.file_url, outputPath, map, true);
       },
       {
         concurrency: 4,

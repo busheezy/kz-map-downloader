@@ -1,9 +1,6 @@
 import { Command, CommandRunner, Option } from 'nest-commander';
 import { RefreshService } from './app.refresh.service';
-
-interface RefreshCommandOptions {
-  dry?: true;
-}
+import { RefreshCommandOptions } from './app.types';
 
 @Command({ name: 'refresh', description: 'Do the damn thang.' })
 export class RefreshCommand extends CommandRunner {

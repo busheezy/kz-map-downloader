@@ -50,3 +50,14 @@ export interface KZDLMap {
 }
 
 export type KZDLMaps = Record<string, KZDLMap>;
+
+export interface RefreshCommandOptions {
+  dry?: true;
+}
+
+export interface DownloadCommandOptions {
+  ws?: true;
+  ftp?: true;
+  mapsPath?: string;
+  tiers?: number[];
+}
