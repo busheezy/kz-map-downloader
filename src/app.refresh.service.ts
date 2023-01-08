@@ -5,17 +5,14 @@ import Bluebird from 'bluebird';
 import { KZDLMap, KZDLMaps } from './app.types';
 import axios from 'axios';
 import { GOKZAPIService } from './app.gokz-api.service';
-
-import * as path from 'node:path';
-import * as fs from 'fs-extra';
-
-const mapsPath = path.resolve(__dirname, '..', 'maps.json');
+import { MapsCacheService } from './app.maps-cache.service';
 
 @Injectable()
 export class RefreshService {
   constructor(
     private readonly workshopService: WorkshopService,
     private readonly gokzApiService: GOKZAPIService,
+    private readonly mapCacheService: MapsCacheService,
   ) {}
 
   createKZDLMapsFromApiResponse(globalApiMaps: Map[]) {
@@ -101,10 +98,7 @@ export class RefreshService {
     if (dry) {
       console.log('Nothing has been saved.');
     } else {
-      await fs.writeJSON(mapsPath, kzdlMaps, {
-        spaces: 2,
-      });
-
+      await this.mapCacheService.save(kzdlMaps);
       console.log('Saved to maps.json');
     }
   }
